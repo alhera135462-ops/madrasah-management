@@ -1,0 +1,156 @@
+﻿<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>আল-হেরা দাখিল মাদ্রাসা</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .student-img { width: 45px; height: 45px; object-fit: cover; border-radius: 50%; }
+        #appSection { display: none; }
+    </style>
+</head>
+<body class="bg-light">
+
+    <!-- Login Box -->
+    <div id="loginSection" class="container mt-5" style="max-width: 400px;">
+        <div class="card shadow border-success">
+            <div class="card-header bg-success text-white text-center py-3">
+                <h4 class="mb-0">🕌 আল-হেরা দাখিল মাদ্রাসা</h4>
+                <small>ম্যানেজমেন্ট সিস্টেমে লগইন করুন</small>
+            </div>
+            <div class="card-body p-4">
+                <form id="loginForm">
+                    <div class="mb-3">
+                        <label class="form-label font-weight-bold">ইউজারনেম</label>
+                        <input type="text" id="loginUsername" class="form-control" placeholder="superadmin / teacher" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label font-weight-bold">পাসওয়ার্ড</label>
+                        <input type="password" id="loginPassword" class="form-control" placeholder="পাসওয়ার্ড দিন" required>
+                    </div>
+                    <button type="submit" class="btn btn-success w-100 py-2 fw-bold">লগইন করুন</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Application Interface -->
+    <div id="appSection" class="container-fluid mt-4 mb-5 px-4">
+        <div class="d-flex justify-content-between align-items-center mb-4 p-3 bg-white shadow-sm rounded border-start border-success border-4">
+            <div>
+                <h2 class="text-success font-weight-bold mb-0">🕌 আল-হেরা দাখিল মাদ্রাসা</h2>
+                <small class="text-muted">অনলাইন ব্যবস্থাপনা ও ক্লাউড ডাটাবেজ সিস্টেম</small>
+            </div>
+            <div>
+                <span id="userBadge" class="badge bg-primary p-2 me-2"></span>
+                <button onclick="logout()" class="btn btn-outline-danger btn-sm">লগআউট</button>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Student Form -->
+            <div class="col-md-4 mb-4">
+                <div class="card shadow-sm border-success">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="card-title mb-0" id="formTitle">শিক্ষার্থী তথ্য ইনপুট</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="studentForm">
+                            <input type="hidden" id="studentId">
+                            <div class="mb-2">
+                                <label class="form-label">শিক্ষার্থীর ছবি</label>
+                                <input type="file" id="photo" class="form-control" accept="image/*">
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label">শিক্ষার্থীর নাম</label>
+                                <input type="text" id="name" class="form-control" required>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-2">
+                                    <label class="form-label">রোল নম্বর</label>
+                                    <input type="text" id="roll" class="form-control" required>
+                                </div>
+                                <div class="col-md-6 mb-2">
+                                    <label class="form-label">শ্রেণি</label>
+                                    <select id="studentClass" class="form-select" required>
+                                        <option value="">বাছাই করুন</option>
+                                        <option value="প্লে শ্রেণি (প্রাক-প্রাথমিক)">প্লে শ্রেণি (প্রাক-প্রাথমিক)</option>
+                                        <option value="নূরানী / নার্সারি">নূরানী / নার্সারি</option>
+                                        <option value="প্রথম (ইবতেদায়ী)">প্রথম (ইবতেদায়ী)</option>
+                                        <option value="দ্বিতীয় (ইবতেদায়ী)">দ্বিতীয় (ইবতেদায়ী)</option>
+                                        <option value="তৃতীয় (ইবতেদায়ী)">তৃতীয় (ইবতেদায়ী)</option>
+                                        <option value="চতুর্থ (ইবতেদায়ী)">চতুর্থ (ইবতেদায়ী)</option>
+                                        <option value="পঞ্চম (ইবতেদায়ী)">পঞ্চম (ইবতেদায়ী)</option>
+                                        <option value="ষষ্ঠ (দাখিল)">ষষ্ঠ (দাখিল)</option>
+                                        <option value="সপ্তম (দাখিল)">সপ্তম (দাখিল)</option>
+                                        <option value="অষ্টম (দাখিল)">অষ্টম (দাখিল)</option>
+                                        <option value="নবম (দাখিল)">নবম (দাখিল)</option>
+                                        <option value="দশম (দাখিল)">দশম (দাখিল)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-2">
+                                    <label class="form-label">শাখা</label>
+                                    <input type="text" id="section" class="form-control">
+                                </div>
+                                <div class="col-md-6 mb-2">
+                                    <label class="form-label">মোবাইল নম্বর</label>
+                                    <input type="text" id="mobile" class="form-control">
+                                </div>
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label">জন্ম নিবন্ধন নম্বর</label>
+                                <input type="text" id="birth_reg" class="form-control">
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label">পিতার নাম</label>
+                                <input type="text" id="father_name" class="form-control">
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label">মাতার নাম</label>
+                                <input type="text" id="mother_name" class="form-control">
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label">ঠিকানা</label>
+                                <textarea id="address" class="form-control" rows="2"></textarea>
+                            </div>
+                            <button type="submit" id="submitBtn" class="btn btn-success w-100 mt-2">সংরক্ষণ করুন</button>
+                            <button type="button" id="cancelBtn" class="btn btn-secondary w-100 mt-2 d-none" onclick="resetForm()">বাতিল</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Student List Table -->
+            <div class="col-md-8">
+                <div class="card shadow-sm border-dark">
+                    <div class="card-header bg-dark text-white">
+                        <h5 class="card-title mb-0">শিক্ষার্থীদের তালিকা (ক্লাউড রেকর্ড)</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-striped align-middle text-center">
+                                <thead class="table-success">
+                                    <tr>
+                                        <th>ছবি</th>
+                                        <th>রোল</th>
+                                        <th>নাম</th>
+                                        <th>শ্রেণি</th>
+                                        <th>মোবাইল</th>
+                                        <th>অ্যাকশন</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="studentTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

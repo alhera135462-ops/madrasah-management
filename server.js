@@ -17,11 +17,11 @@ app.use(bodyParser.json());
 app.use(express.static(__dirname));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// MongoDB Connection String with strict Connection Timeout
-const mongo_URI = "mongodb+srv://alhera135462_db_user:lsFcTuFBVT1Y4G7y@cluster0.41wb1.mongodb.net/alheramadrasah?retryWrites=true&w=majority";
+// Updated MongoDB Connection String with Password: alhera135462
+const mongo_URI = "mongodb+srv://alhera135462_db_user:alhera135462@cluster0.41wb1.mongodb.net/alheramadrasah?retryWrites=true&w=majority";
 
 mongoose.connect(mongo_URI, {
-  serverSelectionTimeoutMS: 5000 // ৫ সেকেন্ডে ডাটাবেজ রেসপন্স না পেলে এরর দেখাবে
+  serverSelectionTimeoutMS: 5000
 })
   .then(() => {
     console.log('MongoDB connected successfully');

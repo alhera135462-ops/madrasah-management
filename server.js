@@ -21,8 +21,41 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 const mongo_URI = "mongodb+srv://alhera135462_db_user:lsFcTuFBVT1Y4G7y@cluster0.41wb1.mongodb.net/alheramadrasah?retryWrites=true&w=majority";
 
 mongoose.connect(mongo_URI)
-  .then(() => console.log('MongoDB connected successfully'))
+  .then(() => {
+    console.log('MongoDB connected successfully');
+    createInitialUsers();
+  })
   .catch(err => console.error('MongoDB connection error:', err));
+
+// User Schema & Model
+const userSchema = new mongoose.Schema({
+  username: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  role: { type: String, default: 'teacher' }
+});
+
+const User = mongoose.model('User', userSchema);
+
+// Initial Users Creation
+async function createInitialUsers() {
+  try {
+    const adminExists = await User.findOne({ username: 'superadmin' });
+    if (!adminExists) {
+      const hashedPassword = await bcrypt.hash('admin1234', 10);
+      await User.create({ username: 'superadmin', password: hashedPassword, role: 'admin' });
+      console.log('Default Admin Created: superadmin / admin1234');
+    }
+
+    const teacherExists = await User.findOne({ username: 'teacher' });
+    if (!teacherExists) {
+      const hashedPassword = await bcrypt.hash('teacher1234', 10);
+      await User.create({ username: 'teacher', password: hashedPassword, role: 'teacher' });
+      console.log('Default Teacher Created: teacher / teacher1234');
+    }
+  } catch (err) {
+    console.error('Error creating default users:', err);
+  }
+}
 
 // Multer Storage
 const storage = multer.memoryStorage();
@@ -38,8 +71,29 @@ const processImage = (req, res, next) => {
   next();
 };
 
+// Login API Route
+app.post('/api/login', async (req, res) => {
+  const { username, password } = req.body;
+  try {
+    const user = await User.findOne({ username });
+    if (!user) {
+      return res.status(400).json({ success: false, message: 'Invalid Username or Password' });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ success: false, message: 'Invalid Username or Password' });
+    }
+
+    const token = jwt.sign({ id: user._id, username: user.username, role: user.role }, JWT_SECRET, { expiresIn: '1d' });
+    res.json({ success: true, token, role: user.role, username: user.username });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+});
+
 // Base Route
-app.get('/', (req, res) => {
+app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 

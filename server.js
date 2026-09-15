@@ -17,10 +17,10 @@ app.use(bodyParser.json());
 app.use(express.static(__dirname));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Updated MongoDB Connection String with Password: alhera135462
-const mongo_URI = "mongodb+srv://alhera135462_db_user:alhera135462@cluster0.41wb1.mongodb.net/alheramadrasah?retryWrites=true&w=majority";
+// New Updated MongoDB Connection String
+const mongo_URI = "mongodb+srv://alheraadmin:12345678a@cluster0.41wb1.mongodb.net/alheramadrasah?retryWrites=true&w=majority";
 
-mongoose.connect(,const mongo_URI = "mongodb+srv://alheraadmin:12345678a@cluster0.41wb1.mongodb.net/alheramadrasah?retryWrites=true&w=majority"; {
+mongoose.connect(mongo_URI, {
   serverSelectionTimeoutMS: 5000
 })
   .then(() => {
@@ -47,14 +47,14 @@ async function createInitialUsers() {
     if (!adminExists) {
       const hashedPassword = await bcrypt.hash('admin1234', 10);
       await User.create({ username: 'superadmin', password: hashedPassword, role: 'admin' });
-      console.log('Default Admin Created');
+      console.log('Default Admin Created: superadmin / admin1234');
     }
 
     const teacherExists = await User.findOne({ username: 'teacher' });
     if (!teacherExists) {
       const hashedPassword = await bcrypt.hash('teacher1234', 10);
       await User.create({ username: 'teacher', password: hashedPassword, role: 'teacher' });
-      console.log('Default Teacher Created');
+      console.log('Default Teacher Created: teacher / teacher1234');
     }
   } catch (err) {
     console.error('Error creating default users:', err);

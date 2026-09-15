@@ -7,36 +7,20 @@ const jwt = require('jsonwebtoken');
 
 const app = express();
 
-// ======================================================
-// BASIC SETTINGS
-// ======================================================
-
 const PORT = process.env.PORT || 3000;
 
-// JWT Secret
 const JWT_SECRET = 'ALHERA_MADRASAH_SECRET_2026_987654321';
 
-// ======================================================
-// MONGODB CONNECTION
-// ======================================================
+// =====================================================
+// MONGODB ATLAS
+// =====================================================
 
-// MongoDB Atlas Database User
-const DB_USERNAME = 'alheraadmin';
-const DB_PASSWORD = 'AlheraDB2026pass';
-
-// MongoDB Database Name
-const DB_NAME = 'alheramadrasah';
-
-// MongoDB Cluster
-const DB_CLUSTER = 'cluster0.41wb1.mongodb.net';
-
-// Final MongoDB Connection URL
 const MONGO_URI =
-  `mongodb+srv://${DB_USERNAME}:${DB_PASSWORD}@${DB_CLUSTER}/${DB_NAME}?retryWrites=true&w=majority`;
+  'mongodb+srv://alheraadmin:AlheraDB2026pass@cluster0.4rwbrlt.mongodb.net/alheramadrasah?retryWrites=true&w=majority&appName=Cluster0';
 
-// ======================================================
+// =====================================================
 // MIDDLEWARE
-// ======================================================
+// =====================================================
 
 app.use(cors());
 
@@ -46,10 +30,8 @@ app.use(express.urlencoded({
   extended: true
 }));
 
-// Website files
 app.use(express.static(__dirname));
 
-// Upload files
 app.use(
   '/uploads',
   express.static(
@@ -57,9 +39,9 @@ app.use(
   )
 );
 
-// ======================================================
+// =====================================================
 // USER SCHEMA
-// ======================================================
+// =====================================================
 
 const userSchema = new mongoose.Schema(
   {
@@ -90,25 +72,22 @@ const User = mongoose.model(
   userSchema
 );
 
-// ======================================================
+// =====================================================
 // CREATE DEFAULT USERS
-// ======================================================
+// =====================================================
 
 async function createDefaultUsers() {
 
   try {
 
-    // --------------------------------------------------
-    // ADMIN USER
-    // --------------------------------------------------
-
+    // ADMIN
     const admin = await User.findOne({
       username: 'superadmin'
     });
 
     if (!admin) {
 
-      const adminPassword =
+      const hashedAdminPassword =
         await bcrypt.hash(
           'admin1234',
           10
@@ -116,33 +95,30 @@ async function createDefaultUsers() {
 
       await User.create({
         username: 'superadmin',
-        password: adminPassword,
+        password: hashedAdminPassword,
         role: 'admin'
       });
 
       console.log(
-        'ADMIN CREATED: superadmin / admin1234'
+        'Admin created successfully.'
       );
 
     } else {
 
       console.log(
-        'Admin user already exists.'
+        'Admin already exists.'
       );
 
     }
 
-    // --------------------------------------------------
-    // TEACHER USER
-    // --------------------------------------------------
-
+    // TEACHER
     const teacher = await User.findOne({
       username: 'teacher'
     });
 
     if (!teacher) {
 
-      const teacherPassword =
+      const hashedTeacherPassword =
         await bcrypt.hash(
           'teacher1234',
           10
@@ -150,18 +126,18 @@ async function createDefaultUsers() {
 
       await User.create({
         username: 'teacher',
-        password: teacherPassword,
+        password: hashedTeacherPassword,
         role: 'teacher'
       });
 
       console.log(
-        'TEACHER CREATED: teacher / teacher1234'
+        'Teacher created successfully.'
       );
 
     } else {
 
       console.log(
-        'Teacher user already exists.'
+        'Teacher already exists.'
       );
 
     }
@@ -169,17 +145,16 @@ async function createDefaultUsers() {
   } catch (error) {
 
     console.error(
-      'Default user creation error:',
+      'User creation error:',
       error.message
     );
 
   }
-
 }
 
-// ======================================================
+// =====================================================
 // LOGIN API
-// ======================================================
+// =====================================================
 
 app.post(
   '/api/login',
@@ -187,7 +162,6 @@ app.post(
 
     try {
 
-      // Get username and password
       const username =
         req.body.username
           ? req.body.username.trim()
@@ -198,7 +172,6 @@ app.post(
           ? req.body.password
           : '';
 
-      // Check empty fields
       if (!username || !password) {
 
         return res.status(400).json({
@@ -209,7 +182,6 @@ app.post(
 
       }
 
-      // Check MongoDB connection
       if (
         mongoose.connection.readyState !== 1
       ) {
@@ -222,13 +194,11 @@ app.post(
 
       }
 
-      // Find user
       const user =
         await User.findOne({
           username: username
         });
 
-      // User not found
       if (!user) {
 
         return res.status(401).json({
@@ -239,15 +209,13 @@ app.post(
 
       }
 
-      // Compare password
-      const passwordCorrect =
+      const passwordMatch =
         await bcrypt.compare(
           password,
           user.password
         );
 
-      // Wrong password
-      if (!passwordCorrect) {
+      if (!passwordMatch) {
 
         return res.status(401).json({
           success: false,
@@ -257,7 +225,6 @@ app.post(
 
       }
 
-      // Create login token
       const token =
         jwt.sign(
           {
@@ -271,7 +238,6 @@ app.post(
           }
         );
 
-      // Successful login
       return res.json({
         success: true,
         token: token,
@@ -298,9 +264,9 @@ app.post(
   }
 );
 
-// ======================================================
-// DATABASE STATUS
-// ======================================================
+// =====================================================
+// DATABASE HEALTH CHECK
+// =====================================================
 
 app.get(
   '/api/health',
@@ -320,9 +286,9 @@ app.get(
   }
 );
 
-// ======================================================
+// =====================================================
 // HOME PAGE
-// ======================================================
+// =====================================================
 
 app.get(
   '/',
@@ -338,35 +304,38 @@ app.get(
   }
 );
 
-// ======================================================
+// =====================================================
 // START SERVER
-// ======================================================
+// =====================================================
 
 async function startServer() {
 
   try {
 
     console.log(
-      '======================================'
+      '===================================='
     );
 
     console.log(
-      'AL-HERA MADRASAH MANAGEMENT SYSTEM'
+      'AL-HERA DAKHIL MADRASAH'
     );
 
     console.log(
-      '======================================'
+      'MANAGEMENT SYSTEM'
     );
 
     console.log(
-      'Connecting to MongoDB...'
+      '===================================='
     );
 
-    // Connect MongoDB
+    console.log(
+      'Connecting to MongoDB Atlas...'
+    );
+
     await mongoose.connect(
       MONGO_URI,
       {
-        serverSelectionTimeoutMS: 10000
+        serverSelectionTimeoutMS: 15000
       }
     );
 
@@ -374,24 +343,26 @@ async function startServer() {
       'MongoDB connected successfully!'
     );
 
-    // Create default users
     await createDefaultUsers();
 
-    // Start server
     app.listen(
       PORT,
       () => {
 
         console.log(
-          '======================================'
+          '===================================='
         );
 
         console.log(
-          `Server running on port ${PORT}`
+          'SERVER STARTED SUCCESSFULLY'
         );
 
         console.log(
-          '======================================'
+          `Port: ${PORT}`
+        );
+
+        console.log(
+          '===================================='
         );
 
         console.log(
@@ -407,7 +378,7 @@ async function startServer() {
         );
 
         console.log(
-          '======================================'
+          '===================================='
         );
 
         console.log(
@@ -423,7 +394,7 @@ async function startServer() {
         );
 
         console.log(
-          '======================================'
+          '===================================='
         );
 
       }
@@ -432,7 +403,7 @@ async function startServer() {
   } catch (error) {
 
     console.error(
-      '======================================'
+      '===================================='
     );
 
     console.error(
@@ -440,7 +411,7 @@ async function startServer() {
     );
 
     console.error(
-      '======================================'
+      '===================================='
     );
 
     console.error(
@@ -448,7 +419,7 @@ async function startServer() {
     );
 
     console.error(
-      '======================================'
+      '===================================='
     );
 
     process.exit(1);
@@ -457,8 +428,8 @@ async function startServer() {
 
 }
 
-// ======================================================
-// RUN APPLICATION
-// ======================================================
+// =====================================================
+// RUN
+// =====================================================
 
 startServer();

@@ -17,15 +17,21 @@ app.use(bodyParser.json());
 app.use(express.static(__dirname));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// MongoDB Connection
+// MongoDB Connection String
 const mongo_URI = "mongodb+srv://alhera135462_db_user:lsFcTuFBVT1Y4G7y@cluster0.41wb1.mongodb.net/alheramadrasah?retryWrites=true&w=majority";
+
+let isDbConnected = false;
 
 mongoose.connect(mongo_URI)
   .then(() => {
     console.log('MongoDB connected successfully');
+    isDbConnected = true;
     createInitialUsers();
   })
-  .catch(err => console.error('MongoDB connection error:', err));
+  .catch(err => {
+    console.error('MongoDB connection error:', err);
+    isDbConnected = false;
+  });
 
 // User Schema & Model
 const userSchema = new mongoose.Schema({
@@ -43,36 +49,26 @@ async function createInitialUsers() {
     if (!adminExists) {
       const hashedPassword = await bcrypt.hash('admin1234', 10);
       await User.create({ username: 'superadmin', password: hashedPassword, role: 'admin' });
-      console.log('Default Admin Created: superadmin / admin1234');
+      console.log('Default Admin Created');
     }
 
     const teacherExists = await User.findOne({ username: 'teacher' });
     if (!teacherExists) {
       const hashedPassword = await bcrypt.hash('teacher1234', 10);
       await User.create({ username: 'teacher', password: hashedPassword, role: 'teacher' });
-      console.log('Default Teacher Created: teacher / teacher1234');
+      console.log('Default Teacher Created');
     }
   } catch (err) {
     console.error('Error creating default users:', err);
   }
 }
 
-// Multer Storage
-const storage = multer.memoryStorage();
-const upload = multer({ 
-  storage: storage,
-  limits: { fileSize: 10 * 1024 * 1024 }
-});
-
-// Image Handling Middleware
-const processImage = (req, res, next) => {
-  if (!req.file) return next();
-  req.file.resizedBase64 = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
-  next();
-};
-
 // Login API Route
 app.post('/api/login', async (req, res) => {
+  if (!isDbConnected && mongoose.connection.readyState !== 1) {
+    return res.status(500).json({ success: false, message: 'Database connecting, please try again in 10 seconds...' });
+  }
+
   const { username, password } = req.body;
   try {
     const user = await User.findOne({ username });
@@ -88,7 +84,8 @@ app.post('/api/login', async (req, res) => {
     const token = jwt.sign({ id: user._id, username: user.username, role: user.role }, JWT_SECRET, { expiresIn: '1d' });
     res.json({ success: true, token, role: user.role, username: user.username });
   } catch (err) {
-    res.status(500).json({ success: false, message: 'Server Error' });
+    console.error('Login Error:', err);
+    res.status(500).json({ success: false, message: 'Database Auth Error: ' + err.message });
   }
 });
 

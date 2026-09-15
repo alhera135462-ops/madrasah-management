@@ -10,32 +10,13 @@ const jwt = require("jsonwebtoken");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const JWT_SECRET = "alhera_secret_key_2026_change_later";
-
-/*
-====================================================
-MONGODB CONNECTION
-====================================================
-
-এখানে আপনার বর্তমান কাজ করা MongoDB connection string
-একবার বসান।
-
-আপনার Cluster hostname:
-cluster0.4rwbrlt.mongodb.net
-
-উদাহরণ:
-
-const MONGO_URI =
-"mongodb+srv://alheraadmin:YOUR_OLD_PASSWORD@cluster0.4rwbrlt.mongodb.net/alheramadrasah?retryWrites=true&w=majority&appName=Cluster0";
-*/
-
-const MONGO_URI =
-"mongodb+srv://alheraadmin:YOUR_OLD_PASSWORD@cluster0.4rwbrlt.mongodb.net/alheramadrasah?retryWrites=true&w=majority&appName=Cluster0";
+const JWT_SECRET =
+    process.env.JWT_SECRET || "al_hera_secret_key_2026";
 
 
-// =========================
+// =====================================================
 // Middleware
-// =========================
+// =====================================================
 
 app.use(cors());
 app.use(express.json());
@@ -44,9 +25,9 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(__dirname));
 
 
-// =========================
+// =====================================================
 // Upload Folder
-// =========================
+// =====================================================
 
 const uploadDir = path.join(__dirname, "uploads");
 
@@ -60,33 +41,52 @@ app.use(
 );
 
 
-// =========================
-// MongoDB
-// =========================
+// =====================================================
+// MongoDB Connection
+// =====================================================
+//
+// Render Dashboard > Environment এ
+// MONGODB_URI নামে আপনার বর্তমান working MongoDB
+// connection string রাখবেন।
+//
 
-mongoose.connect(MONGO_URI, {
-    serverSelectionTimeoutMS: 10000
-})
-.then(async () => {
+const mongo_URI =
+    process.env.MONGODB_URI;
 
-    console.log("MongoDB Connected Successfully");
-
-    await createInitialUsers();
-
-})
-.catch((err) => {
+if (!mongo_URI) {
 
     console.error(
-        "MONGODB CONNECTION FAILED:",
-        err.message
+        "MONGODB_URI Environment Variable পাওয়া যায়নি!"
     );
 
-});
+} else {
+
+    mongoose.connect(mongo_URI, {
+        serverSelectionTimeoutMS: 10000
+    })
+    .then(async () => {
+
+        console.log(
+            "MongoDB connected successfully"
+        );
+
+        await createInitialUsers();
+
+    })
+    .catch((err) => {
+
+        console.error(
+            "MongoDB connection error:",
+            err.message
+        );
+
+    });
+}
 
 
-// =========================
+// =====================================================
 // User Schema
-// =========================
+// =====================================================
 
 const userSchema = new mongoose.Schema({
 
@@ -113,15 +113,18 @@ const userSchema = new mongoose.Schema({
         default: false
     }
 
+}, {
+    timestamps: true
 });
 
 const User =
+    mongoose.models.User ||
     mongoose.model("User", userSchema);
 
 
-// =========================
+// =====================================================
 // Student Schema
-// =========================
+// =====================================================
 
 const studentSchema = new mongoose.Schema({
 
@@ -137,7 +140,7 @@ const studentSchema = new mongoose.Schema({
         trim: true
     },
 
-    class: {
+    studentClass: {
         type: String,
         required: true
     },
@@ -182,25 +185,89 @@ const studentSchema = new mongoose.Schema({
 });
 
 const Student =
+    mongoose.models.Student ||
     mongoose.model("Student", studentSchema);
 
 
-// =========================
-// Initial Users
-// =========================
+// =====================================================
+// Multer
+// =====================================================
+
+const storage = multer.diskStorage({
+
+    destination: function (req, file, cb) {
+        cb(null, uploadDir);
+    },
+
+    filename: function (req, file, cb) {
+
+        const ext =
+            path.extname(file.originalname)
+                .toLowerCase() || ".jpg";
+
+        const filename =
+            "student_" +
+            Date.now() +
+            "_" +
+            Math.random()
+                .toString(36)
+                .substring(2, 8) +
+            ext;
+
+        cb(null, filename);
+    }
+
+});
+
+
+const upload = multer({
+
+    storage: storage,
+
+    limits: {
+        fileSize: 300 * 1024
+    },
+
+    fileFilter: function (req, file, cb) {
+
+        if (
+            file.mimetype &&
+            file.mimetype.startsWith("image/")
+        ) {
+
+            cb(null, true);
+
+        } else {
+
+            cb(
+                new Error(
+                    "শুধু ছবি আপলোড করা যাবে।"
+                )
+            );
+
+        }
+
+    }
+
+});
+
+
+// =====================================================
+// Create Initial Users
+// =====================================================
 
 async function createInitialUsers() {
 
     try {
 
-        let admin =
+        const adminExists =
             await User.findOne({
                 username: "superadmin"
             });
 
-        if (!admin) {
+        if (!adminExists) {
 
-            const password =
+            const hashedPassword =
                 await bcrypt.hash(
                     "admin1234",
                     10
@@ -210,7 +277,7 @@ async function createInitialUsers() {
 
                 username: "superadmin",
 
-                password,
+                password: hashedPassword,
 
                 role: "admin",
 
@@ -219,28 +286,20 @@ async function createInitialUsers() {
             });
 
             console.log(
-                "Default Admin Created: superadmin / admin1234"
+                "Default Admin Created: superadmin"
             );
 
         }
-        else if (
-            admin.mustChangePassword === undefined
-        ) {
-
-            admin.mustChangePassword = true;
-
-            await admin.save();
-        }
 
 
-        let teacher =
+        const teacherExists =
             await User.findOne({
                 username: "teacher"
             });
 
-        if (!teacher) {
+        if (!teacherExists) {
 
-            const password =
+            const hashedPassword =
                 await bcrypt.hash(
                     "teacher1234",
                     10
@@ -250,7 +309,7 @@ async function createInitialUsers() {
 
                 username: "teacher",
 
-                password,
+                password: hashedPassword,
 
                 role: "teacher",
 
@@ -259,24 +318,16 @@ async function createInitialUsers() {
             });
 
             console.log(
-                "Default Teacher Created: teacher / teacher1234"
+                "Default Teacher Created: teacher"
             );
 
-        }
-        else if (
-            teacher.mustChangePassword === undefined
-        ) {
-
-            teacher.mustChangePassword = true;
-
-            await teacher.save();
         }
 
     }
     catch (err) {
 
         console.error(
-            "Initial user error:",
+            "User creation error:",
             err.message
         );
 
@@ -285,84 +336,80 @@ async function createInitialUsers() {
 }
 
 
-// =========================
+// =====================================================
 // Authentication
-// =========================
+// =====================================================
 
 function authenticateToken(req, res, next) {
 
-    const auth =
+    const authHeader =
         req.headers.authorization;
 
-    if (!auth) {
+    if (
+        !authHeader ||
+        !authHeader.startsWith("Bearer ")
+    ) {
 
         return res.status(401).json({
 
             success: false,
 
-            message: "Login required"
+            message:
+                "লগইন প্রয়োজন।"
 
         });
 
     }
 
     const token =
-        auth.split(" ")[1];
+        authHeader.split(" ")[1];
 
-    if (!token) {
+    try {
+
+        const decoded =
+            jwt.verify(
+                token,
+                JWT_SECRET
+            );
+
+        req.user = decoded;
+
+        next();
+
+    }
+    catch (err) {
 
         return res.status(401).json({
 
             success: false,
 
-            message: "Invalid token"
+            message:
+                "Session expired. আবার লগইন করুন।"
 
         });
 
     }
 
-    jwt.verify(
-        token,
-        JWT_SECRET,
-        (err, user) => {
-
-            if (err) {
-
-                return res.status(401).json({
-
-                    success: false,
-
-                    message:
-                        "Session expired. Login again."
-
-                });
-
-            }
-
-            req.user = user;
-
-            next();
-
-        }
-    );
-
 }
 
 
-// =========================
+// =====================================================
 // Admin Only
-// =========================
+// =====================================================
 
 function adminOnly(req, res, next) {
 
-    if (req.user.role !== "admin") {
+    if (
+        !req.user ||
+        req.user.role !== "admin"
+    ) {
 
         return res.status(403).json({
 
             success: false,
 
             message:
-                "শুধু Super Admin এই কাজটি করতে পারবেন।"
+                "এই কাজটি শুধু সুপার এডমিন করতে পারবেন।"
 
         });
 
@@ -373,15 +420,31 @@ function adminOnly(req, res, next) {
 }
 
 
-// =========================
+// =====================================================
 // Login
-// =========================
+// =====================================================
 
 app.post(
     "/api/login",
     async (req, res) => {
 
         try {
+
+            if (
+                mongoose.connection.readyState !== 1
+            ) {
+
+                return res.status(500).json({
+
+                    success: false,
+
+                    message:
+                        "MongoDB সংযোগ পাওয়া যাচ্ছে না।"
+
+                });
+
+            }
+
 
             const username =
                 String(
@@ -393,23 +456,12 @@ app.post(
                     req.body.password || ""
                 );
 
-            if (!username || !password) {
-
-                return res.status(400).json({
-
-                    success: false,
-
-                    message:
-                        "Username ও Password দিন।"
-
-                });
-
-            }
 
             const user =
                 await User.findOne({
-                    username
+                    username: username
                 });
+
 
             if (!user) {
 
@@ -418,57 +470,67 @@ app.post(
                     success: false,
 
                     message:
-                        "Invalid Username or Password"
+                        "ইউজারনেম অথবা পাসওয়ার্ড ভুল।"
 
                 });
 
             }
 
-            const match =
+
+            const isMatch =
                 await bcrypt.compare(
                     password,
                     user.password
                 );
 
-            if (!match) {
+
+            if (!isMatch) {
 
                 return res.status(401).json({
 
                     success: false,
 
                     message:
-                        "Invalid Username or Password"
+                        "ইউজারনেম অথবা পাসওয়ার্ড ভুল।"
 
                 });
 
             }
 
+
             const token =
                 jwt.sign(
 
                     {
-                        id: user._id,
-                        username: user.username,
-                        role: user.role
+                        id: user._id.toString(),
+
+                        username:
+                            user.username,
+
+                        role:
+                            user.role
                     },
 
                     JWT_SECRET,
 
                     {
-                        expiresIn: "1d"
+                        expiresIn: "7d"
                     }
 
                 );
+
 
             res.json({
 
                 success: true,
 
-                token,
+                token: token,
 
-                username: user.username,
+                username:
+                    user.username,
 
-                role: user.role,
+                role:
+                    user.role,
 
                 mustChangePassword:
                     user.mustChangePassword === true
@@ -484,7 +546,9 @@ app.post(
 
                 success: false,
 
-                message: "Server Error"
+                message:
+                    "Server Error: " +
+                    err.message
 
             });
 
@@ -494,9 +558,9 @@ app.post(
 );
 
 
-// =========================
+// =====================================================
 // Change Password
-// =========================
+// =====================================================
 
 app.post(
     "/api/change-password",
@@ -505,16 +569,20 @@ app.post(
 
         try {
 
-            const {
-                currentPassword,
-                newPassword,
-                confirmPassword
-            } = req.body;
+            const currentPassword =
+                String(
+                    req.body.currentPassword || ""
+                );
+
+            const newPassword =
+                String(
+                    req.body.newPassword || ""
+                );
+
 
             if (
                 !currentPassword ||
-                !newPassword ||
-                !confirmPassword
+                !newPassword
             ) {
 
                 return res.status(400).json({
@@ -522,11 +590,12 @@ app.post(
                     success: false,
 
                     message:
-                        "সবগুলো ঘর পূরণ করুন।"
+                        "সব তথ্য পূরণ করুন।"
 
                 });
 
             }
+
 
             if (newPassword.length < 6) {
 
@@ -535,32 +604,18 @@ app.post(
                     success: false,
 
                     message:
-                        "নতুন Password কমপক্ষে ৬ অক্ষরের হতে হবে।"
+                        "নতুন পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে।"
 
                 });
 
             }
 
-            if (
-                newPassword !==
-                confirmPassword
-            ) {
-
-                return res.status(400).json({
-
-                    success: false,
-
-                    message:
-                        "নতুন Password দুটো একই নয়।"
-
-                });
-
-            }
 
             const user =
                 await User.findById(
                     req.user.id
                 );
+
 
             if (!user) {
 
@@ -575,24 +630,27 @@ app.post(
 
             }
 
-            const match =
+
+            const isMatch =
                 await bcrypt.compare(
                     currentPassword,
                     user.password
                 );
 
-            if (!match) {
+
+            if (!isMatch) {
 
                 return res.status(400).json({
 
                     success: false,
 
                     message:
-                        "বর্তমান Password সঠিক নয়।"
+                        "বর্তমান পাসওয়ার্ড ভুল।"
 
                 });
 
             }
+
 
             user.password =
                 await bcrypt.hash(
@@ -603,7 +661,9 @@ app.post(
             user.mustChangePassword =
                 false;
 
+
             await user.save();
+
 
             res.json({
 
@@ -634,91 +694,9 @@ app.post(
 );
 
 
-// =========================
-// Image Upload
-// =========================
-
-const storage =
-    multer.diskStorage({
-
-        destination:
-            (req, file, cb) => {
-
-                cb(
-                    null,
-                    uploadDir
-                );
-
-            },
-
-        filename:
-            (req, file, cb) => {
-
-                const ext =
-                    path.extname(
-                        file.originalname
-                    );
-
-                const filename =
-                    Date.now() +
-                    "_" +
-                    Math.random()
-                        .toString(36)
-                        .substring(2, 8) +
-                    ext;
-
-                cb(
-                    null,
-                    filename
-                );
-
-            }
-
-    });
-
-
-const upload =
-    multer({
-
-        storage,
-
-        limits: {
-            fileSize:
-                200 * 1024
-        },
-
-        fileFilter:
-            (req, file, cb) => {
-
-                if (
-                    file.mimetype
-                        .startsWith("image/")
-                ) {
-
-                    cb(
-                        null,
-                        true
-                    );
-
-                }
-                else {
-
-                    cb(
-                        new Error(
-                            "শুধু Image upload করা যাবে।"
-                        )
-                    );
-
-                }
-
-            }
-
-    });
-
-
-// =========================
+// =====================================================
 // Get Students
-// =========================
+// =====================================================
 
 app.get(
     "/api/students",
@@ -729,10 +707,11 @@ app.get(
 
             const students =
                 await Student.find()
-                .sort({
-                    class: 1,
-                    roll: 1
-                });
+                    .sort({
+                        studentClass: 1,
+                        roll: 1
+                    });
+
 
             res.json({
 
@@ -755,7 +734,7 @@ app.get(
                 success: false,
 
                 message:
-                    "Student data load করা যায়নি।"
+                    "শিক্ষার্থীদের তথ্য লোড করা যায়নি।"
 
             });
 
@@ -765,9 +744,9 @@ app.get(
 );
 
 
-// =========================
+// =====================================================
 // Add Student
-// =========================
+// =====================================================
 
 app.post(
     "/api/students",
@@ -779,16 +758,16 @@ app.post(
         try {
 
             const student =
-                await Student.create({
+                new Student({
 
                     name:
-                        req.body.name,
+                        req.body.name || "",
 
                     roll:
-                        req.body.roll,
+                        req.body.roll || "",
 
-                    class:
-                        req.body.studentClass,
+                    studentClass:
+                        req.body.studentClass || "",
 
                     section:
                         req.body.section || "",
@@ -815,6 +794,10 @@ app.post(
 
                 });
 
+
+            await student.save();
+
+
             res.json({
 
                 success: true,
@@ -822,7 +805,8 @@ app.post(
                 message:
                     "শিক্ষার্থী সফলভাবে যুক্ত হয়েছে।",
 
-                data: student
+                data:
+                    student
 
             });
 
@@ -830,6 +814,21 @@ app.post(
         catch (err) {
 
             console.error(err);
+
+            if (req.file) {
+
+                const p =
+                    path.join(
+                        uploadDir,
+                        req.file.filename
+                    );
+
+                if (fs.existsSync(p)) {
+                    fs.unlinkSync(p);
+                }
+
+            }
+
 
             res.status(500).json({
 
@@ -846,9 +845,9 @@ app.post(
 );
 
 
-// =========================
+// =====================================================
 // Update Student
-// =========================
+// =====================================================
 
 app.put(
     "/api/students/:id",
@@ -864,6 +863,7 @@ app.put(
                     req.params.id
                 );
 
+
             if (!student) {
 
                 return res.status(404).json({
@@ -877,14 +877,15 @@ app.put(
 
             }
 
+
             student.name =
-                req.body.name;
+                req.body.name || "";
 
             student.roll =
-                req.body.roll;
+                req.body.roll || "";
 
-            student.class =
-                req.body.studentClass;
+            student.studentClass =
+                req.body.studentClass || "";
 
             student.section =
                 req.body.section || "";
@@ -916,14 +917,10 @@ app.put(
                         );
 
                     if (
-                        fs.existsSync(
-                            oldPath
-                        )
+                        fs.existsSync(oldPath)
                     ) {
 
-                        fs.unlinkSync(
-                            oldPath
-                        );
+                        fs.unlinkSync(oldPath);
 
                     }
 
@@ -937,6 +934,7 @@ app.put(
 
             await student.save();
 
+
             res.json({
 
                 success: true,
@@ -944,7 +942,8 @@ app.put(
                 message:
                     "তথ্য আপডেট হয়েছে।",
 
-                data: student
+                data:
+                    student
 
             });
 
@@ -968,9 +967,9 @@ app.put(
 );
 
 
-// =========================
+// =====================================================
 // Delete Student
-// =========================
+// =====================================================
 
 app.delete(
     "/api/students/:id",
@@ -984,6 +983,7 @@ app.delete(
                 await Student.findById(
                     req.params.id
                 );
+
 
             if (!student) {
 
@@ -1008,14 +1008,10 @@ app.delete(
                     );
 
                 if (
-                    fs.existsSync(
-                        photoPath
-                    )
+                    fs.existsSync(photoPath)
                 ) {
 
-                    fs.unlinkSync(
-                        photoPath
-                    );
+                    fs.unlinkSync(photoPath);
 
                 }
 
@@ -1056,9 +1052,9 @@ app.delete(
 );
 
 
-// =========================
+// =====================================================
 // Error Handler
-// =========================
+// =====================================================
 
 app.use(
     (err, req, res, next) => {
@@ -1079,25 +1075,29 @@ app.use(
 );
 
 
-// =========================
+// =====================================================
 // Frontend
-// =========================
+// =====================================================
 
-app.get("*", (req, res) => {
+// Express 5 compatible
+app.get(
+    /.*/,
+    (req, res) => {
 
-    res.sendFile(
-        path.join(
-            __dirname,
-            "index.html"
-        )
-    );
+        res.sendFile(
+            path.join(
+                __dirname,
+                "index.html"
+            )
+        );
 
-});
+    }
+);
 
 
-// =========================
-// Start
-// =========================
+// =====================================================
+// Start Server
+// =====================================================
 
 app.listen(
     PORT,

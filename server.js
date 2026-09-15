@@ -20,7 +20,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // Updated MongoDB Connection String with Password: alhera135462
 const mongo_URI = "mongodb+srv://alhera135462_db_user:alhera135462@cluster0.41wb1.mongodb.net/alheramadrasah?retryWrites=true&w=majority";
 
-mongoose.connect(mongo_URI, {
+mongoose.connect(,const mongo_URI = "mongodb+srv://alheraadmin:12345678a@cluster0.41wb1.mongodb.net/alheramadrasah?retryWrites=true&w=majority"; {
   serverSelectionTimeoutMS: 5000
 })
   .then(() => {

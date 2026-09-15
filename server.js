@@ -6,7 +6,7 @@ const path = require('path');
 const multer = require('multer');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const sharp = require('sharp'); // ফাইল অপটিমাইজেশনের জন্য sharp
+const Jimp = require('jimp');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -25,24 +25,22 @@ mongoose.connect(mongo_URI)
   .then(() => console.log('MongoDB connected successfully'))
   .catch(err => console.error('MongoDB connection error:', err));
 
-// Memory storage for multer (Sharp দিয়ে প্রসেস করার জন্য মেমরিতে রাখা)
+// Multer Memory Storage
 const storage = multer.memoryStorage();
 const upload = multer({ 
   storage: storage,
-  limits: { fileSize: 10 * 1024 * 1024 } // ১০ MB পর্যন্ত আপলোড এলাউড
+  limits: { fileSize: 10 * 1024 * 1024 } // 10 MB Max
 });
 
-// Image Processing Middleware using Sharp (সাইজ সর্বোচ্চ 300x300 এবং quality 80% এ কমাবে)
+// Image Processing Middleware using Jimp (300x300 and 80% JPEG Quality)
 const processImage = async (req, res, next) => {
   if (!req.file) return next();
   try {
-    const resizedBuffer = await sharp(req.file.buffer)
-      .resize(300, 300, { fit: 'cover' })
-      .toFormat('jpeg')
-      .jpeg({ quality: 80 })
-      .toBuffer();
+    const image = await Jimp.read(req.file.buffer);
+    await image.cover(300, 300);
+    await image.quality(80);
+    const resizedBuffer = await image.getBufferAsync(Jimp.MIME_JPEG);
     
-    // ডাটাবেজে বেস৬৪ স্ট্রিং বা বাফার হিসেবে সেভ করার জন্য
     req.file.resizedBase64 = `data:image/jpeg;base64,${resizedBuffer.toString('base64')}`;
     next();
   } catch (error) {
@@ -51,7 +49,7 @@ const processImage = async (req, res, next) => {
   }
 };
 
-// Routes placeholder / Base Route
+// Base Route
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });

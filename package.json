@@ -1,18 +1,20 @@
 {
-  "name": "madrasah-management",
+  "name": "al-hera-dakhil-madrasah-management",
   "version": "1.0.0",
   "description": "Al-Hera Dakhil Madrasah Management System",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
+  "engines": {
+    "node": ">=18"
+  },
   "dependencies": {
     "bcryptjs": "^2.4.3",
-    "body-parser": "^1.20.2",
     "cors": "^2.8.5",
-    "express": "^4.18.2",
+    "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.0.0",
-    "multer": "^1.4.5-lts.1"
+    "mongoose": "^8.18.0",
+    "multer": "^2.0.2"
   }
 }

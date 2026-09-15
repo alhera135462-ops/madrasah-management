@@ -17,20 +17,18 @@ app.use(bodyParser.json());
 app.use(express.static(__dirname));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// MongoDB Connection String
+// MongoDB Connection String with strict Connection Timeout
 const mongo_URI = "mongodb+srv://alhera135462_db_user:lsFcTuFBVT1Y4G7y@cluster0.41wb1.mongodb.net/alheramadrasah?retryWrites=true&w=majority";
 
-let isDbConnected = false;
-
-mongoose.connect(mongo_URI)
+mongoose.connect(mongo_URI, {
+  serverSelectionTimeoutMS: 5000 // ৫ সেকেন্ডে ডাটাবেজ রেসপন্স না পেলে এরর দেখাবে
+})
   .then(() => {
     console.log('MongoDB connected successfully');
-    isDbConnected = true;
     createInitialUsers();
   })
   .catch(err => {
-    console.error('MongoDB connection error:', err);
-    isDbConnected = false;
+    console.error('MongoDB connection error:', err.message);
   });
 
 // User Schema & Model
@@ -65,8 +63,11 @@ async function createInitialUsers() {
 
 // Login API Route
 app.post('/api/login', async (req, res) => {
-  if (!isDbConnected && mongoose.connection.readyState !== 1) {
-    return res.status(500).json({ success: false, message: 'Database connecting, please try again in 10 seconds...' });
+  if (mongoose.connection.readyState !== 1) {
+    return res.status(500).json({ 
+      success: false, 
+      message: 'MongoDB Connection Failed! Please check Atlas DB User Password.' 
+    });
   }
 
   const { username, password } = req.body;
@@ -82,10 +83,9 @@ app.post('/api/login', async (req, res) => {
     }
 
     const token = jwt.sign({ id: user._id, username: user.username, role: user.role }, JWT_SECRET, { expiresIn: '1d' });
-    res.json({ success: true, token, role: user.role, username: user.username });
+    res.json({ success: true, token, role: user.role, username: username });
   } catch (err) {
-    console.error('Login Error:', err);
-    res.status(500).json({ success: false, message: 'Database Auth Error: ' + err.message });
+    res.status(500).json({ success: false, message: 'Server Error: ' + err.message });
   }
 });
 

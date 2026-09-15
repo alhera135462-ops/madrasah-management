@@ -6,7 +6,6 @@ const path = require('path');
 const multer = require('multer');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const Jimp = require('jimp');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -25,28 +24,18 @@ mongoose.connect(mongo_URI)
   .then(() => console.log('MongoDB connected successfully'))
   .catch(err => console.error('MongoDB connection error:', err));
 
-// Multer Memory Storage
+// Multer Storage
 const storage = multer.memoryStorage();
 const upload = multer({ 
   storage: storage,
-  limits: { fileSize: 10 * 1024 * 1024 } // 10 MB Max
+  limits: { fileSize: 10 * 1024 * 1024 }
 });
 
-// Image Processing Middleware using Jimp (300x300 and 80% JPEG Quality)
-const processImage = async (req, res, next) => {
+// Image Handling Middleware
+const processImage = (req, res, next) => {
   if (!req.file) return next();
-  try {
-    const image = await Jimp.read(req.file.buffer);
-    await image.cover(300, 300);
-    await image.quality(80);
-    const resizedBuffer = await image.getBufferAsync(Jimp.MIME_JPEG);
-    
-    req.file.resizedBase64 = `data:image/jpeg;base64,${resizedBuffer.toString('base64')}`;
-    next();
-  } catch (error) {
-    console.error('Image compression error:', error);
-    next();
-  }
+  req.file.resizedBase64 = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+  next();
 };
 
 // Base Route
